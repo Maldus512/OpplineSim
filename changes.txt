@@ -1,0 +1,5 @@
+Ieee80211MgmtAP.cc e .h
+Added public functions getSSID and setSSID
+
+Ieee80211MgmtSTA.h
+Made field (and corresponding data type) apList public

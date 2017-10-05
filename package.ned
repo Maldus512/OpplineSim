@@ -1,0 +1,3 @@
+package oppline;
+
+@license(LGPL);
