@@ -22,6 +22,7 @@ class CircularQueue {
     bool isQueued(string s);
     void print();
     void remove(string s);
+    void debugPrint();
   private:
     int qSize;
     std::string *cqueue_arr;

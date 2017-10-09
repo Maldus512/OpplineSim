@@ -36,6 +36,8 @@ OpplineMsg::OpplineMsg(string m) {
     }
     tmp = base94ToDec(add, 8);
     dstAdd = inet::MACAddress(tmp);
+
+    msg = m;
 }
 
 void OpplineMsg::test(inet::MACAddress add) {
@@ -128,12 +130,14 @@ string OpplineMsg::getSSID() {
 }
 
 
-string OpplineMsg::response(string orig) {
+string OpplineMsg::response() {
+    string orig = msg;
     orig[7] = (char) ACK;
     return orig;
 }
 
-string OpplineMsg::original(string res) {
+string OpplineMsg::original() {
+    string res = msg;
     res[7] = (char) REQ;
     return res;
 }

@@ -71,18 +71,30 @@ void CircularQueue::remove(std::string s) {//TODO consider empty queue
         for (i = found; i < rear; i++) {
             cqueue_arr[i] = cqueue_arr[i+1];
         }
-        rear--;
+        if (rear == 0) {
+            rear = qSize -1;
+        } else {
+            rear--;
+        }
     } else if (rear < front) {
         if (found <= rear) {
             for (i = found; i < rear; i++) {
                 cqueue_arr[i] = cqueue_arr[i+1];
             }
-            rear--;
+            if (rear == 0) {
+                rear = qSize-1;
+            } else {
+                rear--;
+            }
         } else if (found >= front) {
             for (i = found; i > front; i--) {
                 cqueue_arr[i] = cqueue_arr[i-1];
             }
-            front++;
+            if (front == qSize-1){
+                front = 0;
+            } else {
+                front++;
+            }
         }
     }
 }
@@ -149,6 +161,7 @@ void CircularQueue::print() {
     if (front == -1) {
         EV << "emtpy queue\n";
     } else if (front == rear) {
+        EV<< '\t' <<"Printing Q of size " << size() << '\n';
         EV << '\t' << cqueue_arr[i] << '\n';
     }else if (i < rear) {
         EV<< '\t' <<"Printing Q of size " << size() << '\n';
@@ -168,5 +181,14 @@ void CircularQueue::print() {
             i++;
         }
     }
+}
+
+void CircularQueue::debugPrint() {
+    int i;
+    std::cout << "front: " << front << " --- rear: " << rear << " --- size: " << size() <<'\n';
+    for (i = 0; i < qSize; i++) {
+        std::cout << cqueue_arr[i] << " (" << i << ")" << '\t';
+    }
+    std::cout << "\n\n";
 }
 

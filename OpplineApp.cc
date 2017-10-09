@@ -26,6 +26,12 @@ using namespace omnetpp;
 const uint64_t minMac = 11725260718081;
 //const uint64_t maxMac = 11725260718081;
 
+
+
+
+
+
+
 class OpplineApp : public cSimpleModule {
   public:
     OpplineApp();
@@ -44,6 +50,8 @@ class OpplineApp : public cSimpleModule {
     string curdst;
 
   private:
+    bool f_wait4msg;
+    void test();
     simtime_t interval;
     simtime_t tmi, txbo, txob;
     int numDevices;
@@ -67,6 +75,7 @@ OpplineApp::OpplineApp() {
 
 void OpplineApp::initialize() {
     EV << "initialized\n";
+    f_wait4msg = false;
     inet::ieee80211::Ieee80211Mac *add;
     //get time for opportunistic beacon and beacon observer states
     interval = par("tob");
@@ -77,7 +86,7 @@ void OpplineApp::initialize() {
     //get number of devices (to generate MAC destination addresses)
     numDevices = getParentModule()->getParentModule()->par("hostNum");
     cMessage *genOpplineMessage = new cMessage("MSG");
-
+    state = "";
     parentHost = getParentModule();
     ap = parentHost->getSubmodule("wlan", 0);
     wlan = parentHost->getSubmodule("wlan", 1);
@@ -93,7 +102,7 @@ void OpplineApp::initialize() {
     initial_msg = par("initial_msg");
     //Begin as AP or STA
     if (par("initial_state")) {
-        if (initial_msg > 0) {
+       if (initial_msg > 0) {
             newMessage(initial_msg); //remove TODO
         } else {
             newMessage();
@@ -126,23 +135,26 @@ void OpplineApp::handleMessage(cMessage *msg) {
 
 void OpplineApp::delayOBtoBO() {
     //intermediate message to wait txbo seconds
-    cMessage *event = new cMessage("STA");
-    state = TRANSBO;
-    EV << "waiting " << txbo << "to transition to Beacon Observer\n";
-    scheduleAt(simTime() + txbo, event);
+    if (messageQ->size() > 0) {
+        cMessage *event = new cMessage("STA");
+        state = TRANSBO;
+        EV << "waiting " << txbo << "to transition to Beacon Observer\n";
+        scheduleAt(simTime() + txbo, event);
+    } else {
+        f_wait4msg = true;
+    }
 }
 
 void OpplineApp::delayBOtoOB() {
     //intermediate message to wait txob seconds
-    cMessage *event = new cMessage("AP");
-    if (messageQ->size() <= 0) {
-        event = new cMessage("OB");
-        scheduleAt(simTime() + interval, event);
-        return;
+    if (messageQ->size() > 0) {
+        cMessage *event = new cMessage("AP");
+        state = TRANSOB;
+        EV << "waiting " << txob << "to transition to Opportunistic Beacon\n";
+        scheduleAt(simTime() + txob, event);
+    } else {
+        f_wait4msg = true;
     }
-    state = TRANSOB;
-    EV << "waiting " << txob << "to transition to Opportunistic Beacon\n";
-    scheduleAt(simTime() + txob, event);
 }
 
 void OpplineApp::OBtoBO() {
@@ -181,9 +193,8 @@ void OpplineApp::BOtoOB() {
         scheduleAt(simTime() + interval, event);
     //If I have no messages in the queue try again later
     } else {
-        //TODO move to Opportunistic Beacon when eventually a message is found
-        event = new cMessage("AP");
-        scheduleAt(simTime() + interval, event);
+        f_wait4msg = true;
+        OBtoBO();
     }
 
 }
@@ -216,7 +227,7 @@ void OpplineApp::scan() {
         return;
     }
     OpplineMsg *m;
-    cMessage *event = new cMessage("SCAN");
+    cMessage *scanEv = new cMessage("SCAN");
     simtime_t tsi = normal(3.0, 0.247);
     inet::ieee80211::Ieee80211MgmtSTA *mgmtSTA =
                 (inet::ieee80211::Ieee80211MgmtSTA *) wlan->getSubmodule("mgmt");
@@ -236,18 +247,60 @@ void OpplineApp::scan() {
         if (!m->isAck() && m->dstAdd.compareTo(address) == 0) {
             getParentModule()->bubble("received message");
             EV << "Message received\n";
-            messageQ->enQueue(m->response(iterator->ssid));
+            messageQ->enQueue(m->response());
         } else if (m->isAck() && m->srcAdd.compareTo(address) == 0) {
             EV << "************* RECEIVED ACK *************\n";
-            messageQ->remove(m->original(iterator->ssid));
-        } else if (m->isAck() && messageQ->isQueued(m->original(iterator->ssid))) {
+            messageQ->remove(m->original());
+        } else if (m->isAck() && messageQ->isQueued(m->original())) {
             EV << "PASSING ACK\n";
-            messageQ->remove(m->original(iterator->ssid));
-            messageQ->enQueue(iterator->ssid);
-        } else if (!messageQ->isQueued(iterator->ssid)) {
-            messageQ->enQueue(iterator->ssid);
+            messageQ->remove(m->original());
+            messageQ->enQueue(m->getSSID());
+        } else if (!messageQ->isQueued(m->getSSID())) {
+            if (!messageQ->isQueued(m->response())) {
+                messageQ->enQueue(m->getSSID());
+            }
         }
     }
     messageQ->print();
-    scheduleAt(simTime() + tsi, event);
+
+    if (messageQ->size() > 0 && f_wait4msg) {
+        f_wait4msg = false;
+        delayBOtoOB();
+    } else {
+        scheduleAt(simTime() + tsi, scanEv);
+    }
+}
+
+
+void OpplineApp::test() {
+    int size = 6, i;
+    CircularQueue msgQ(size);
+    OpplineMsg *msg;
+    string *cqueue_arr = new std::string[size];
+    for (i = 0; i < size; i++) {
+        msg = new OpplineMsg(simTime(), i%2==0?REQ:ACK, address, inet::MACAddress(minMac+i));
+        cqueue_arr[i] = std::to_string(i);
+    }
+
+    msgQ.enQueue(cqueue_arr[0]);
+    //msgQ.debugPrint();
+    msgQ.enQueue(cqueue_arr[1]);
+    //msgQ.debugPrint();
+    msgQ.enQueue(cqueue_arr[2]);
+    msgQ.remove(cqueue_arr[1]);
+    //msgQ.debugPrint();
+    msgQ.deQueue();
+    //msgQ.debugPrint();
+    msgQ.enQueue(cqueue_arr[1]);
+    msgQ.enQueue(cqueue_arr[2]);
+    msgQ.enQueue(cqueue_arr[3]);
+    msgQ.enQueue(cqueue_arr[4]);
+    msgQ.enQueue(cqueue_arr[5]);
+    msgQ.debugPrint();
+    msgQ.remove(cqueue_arr[5]);
+    msgQ.debugPrint();
+    msgQ.deQueue();
+    msgQ.debugPrint();
+    msgQ.remove(cqueue_arr[2]);
+    msgQ.debugPrint();
 }

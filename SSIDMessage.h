@@ -25,8 +25,8 @@ class OpplineMsg {
         inet::MACAddress srcAdd;
         inet::MACAddress dstAdd;
         void test(inet::MACAddress add);
-        string response(string orig);
-        string original(string res);
+        string response();
+        string original();
         bool isAck();
     private:
         string msg;
