@@ -27,8 +27,8 @@ CircularQueue::~CircularQueue() {
  */
 int CircularQueue::enQueue(std::string item) {
     if ((front == 0 && rear == qSize-1) || (front == rear+1)) {
-        //Queue overflow
-        return -1;
+        //Queue overflow --> dequeue to make room
+        deQueue();
     }
 
     if (front == -1) {
@@ -44,7 +44,7 @@ int CircularQueue::enQueue(std::string item) {
     return 0;
 }
 
-void CircularQueue::remove(std::string s) {//TODO consider empty queue
+void CircularQueue::remove(std::string s) {
     int i = front - 1, found = -1;
     if (front == -1) {
         return;
@@ -56,7 +56,7 @@ void CircularQueue::remove(std::string s) {//TODO consider empty queue
             i++;
         }
         EV << "Comparing: " << cqueue_arr[i] << " --- " << s << '\n';
-        if (cqueue_arr[i].compare(s) == 0) {
+        if (equal(cqueue_arr[i], s)) {
             found = i;
             break;
         }
@@ -110,12 +110,30 @@ bool CircularQueue::isQueued(std::string s) {
         } else {
             i++;
         }
-        if (cqueue_arr[i].compare(s) == 0) {
+        if (equal(cqueue_arr[i], s)) {
             return true;
         }
     } while(i != rear);
 
     return false;
+}
+
+bool CircularQueue::equal(string m1, string m2) {
+    int i;
+    if (m1.length() != 32 || m2.length() != 32) {
+        throw std::invalid_argument( "message of invalid length in queue" );
+    }
+
+    for (i = 0; i < 33; i++) {
+        if (i >= 2 && i <= 6) {
+            continue; //do not consider timestamp in comparing messages
+        }
+        if (m1[i] != m2[i]) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 /*
@@ -166,7 +184,7 @@ void CircularQueue::print() {
     }else if (i < rear) {
         EV<< '\t' <<"Printing Q of size " << size() << '\n';
         while(i <= rear) {
-            EV << '\t' << cqueue_arr[i] << " ("<< i<<")" << '\t';
+            EV << '\t' << cqueue_arr[i] << " ---size " <<cqueue_arr[i].length() << " ("<< i<<")" << '\t';
             i++;
         }
     } else {

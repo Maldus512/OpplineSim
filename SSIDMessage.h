@@ -26,7 +26,9 @@ class OpplineMsg {
         inet::MACAddress dstAdd;
         void test(inet::MACAddress add);
         string response();
+        string response(simtime_t now);
         string original();
+        int64_t latency(simtime_t now);
         bool isAck();
     private:
         string msg;

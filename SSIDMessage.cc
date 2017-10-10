@@ -48,6 +48,10 @@ void OpplineMsg::test(inet::MACAddress add) {
     x = base94ToDec(arr, 8);
 }
 
+int64_t OpplineMsg::latency(simtime_t now) {
+    return now.inUnit(SIMTIME_MS) - timeStamp;
+}
+
 uint64_t OpplineMsg::base94ToDec(char s[], int len) {
     char tmp;
     uint64_t mult, middle;
@@ -64,7 +68,7 @@ uint64_t OpplineMsg::base94ToDec(char s[], int len) {
 }
 
 OpplineMsg::OpplineMsg(omnetpp::simtime_t t, char type,inet::MACAddress src, inet::MACAddress dst) {
-    char res[32],mac1[8], mac2[8], timestamp[5];
+    char res[33],mac1[8], mac2[8], timestring[5];
     int i, j;
     uint64_t tmp;
     for (j = 0; j < 32; j++) {
@@ -78,9 +82,9 @@ OpplineMsg::OpplineMsg(omnetpp::simtime_t t, char type,inet::MACAddress src, ine
     decToBase94(tmp, 8, mac1);
     tmp = dst.getInt();
     decToBase94(tmp, 8, mac2);
-    decToBase94(time,5, timestamp);
+    decToBase94(time,5, timestring);
     for (i = 0; i < 5; i++) {
-        res[i+2] = timestamp[i];
+        res[i+2] = timestring[i];
     }
     res[7] = type;
     msgType = type;
@@ -93,6 +97,7 @@ OpplineMsg::OpplineMsg(omnetpp::simtime_t t, char type,inet::MACAddress src, ine
     for (i = 0; i < 8; i++) {
         res[16+8+i] = mac2[i];
     }
+    res[32] = '\0';
     msg = string(res);
 }
 
@@ -127,6 +132,20 @@ void OpplineMsg::hexToBase94(string hex, int size, char *res) {
 
 string OpplineMsg::getSSID() {
     return msg;
+}
+
+
+string OpplineMsg::response(simtime_t now) {
+    int time =now.inUnit(SIMTIME_MS);
+    int i;
+    char timestring[5];
+    string orig = msg;
+    decToBase94(time,5, timestring);
+    for (i = 0; i < 5; i++) {
+        orig[i+2] = timestring[i];
+    }
+    orig[7] = (char) ACK;
+    return orig;
 }
 
 

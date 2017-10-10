@@ -24,6 +24,7 @@ class CircularQueue {
     void remove(string s);
     void debugPrint();
   private:
+    bool equal(string m1, string m2);
     int qSize;
     std::string *cqueue_arr;
     int front, rear;

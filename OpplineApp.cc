@@ -39,6 +39,10 @@ class OpplineApp : public cSimpleModule {
     cModule *ap;
     cModule *wlan;
     inet::MACAddress address;
+    long numSent, numSentAck;
+    long numRecvd, numRecvdAck;
+    long numAckd;
+    long numGen;
   protected:
     // The following redefined virtual function holds the algorithm.
     virtual void initialize() override;
@@ -64,27 +68,38 @@ class OpplineApp : public cSimpleModule {
     virtual void newMessage(int dst);
     virtual void scan();
     inet::MACAddress randomMAC();
+    virtual void finish() override;
 };
 // The module class needs to be registered with OMNeT++
 Define_Module(OpplineApp);
 
 OpplineApp::OpplineApp() {
-    messageQ = new CircularQueue(5);
+    messageQ = new CircularQueue(10);
+    numSent = 0;
+    numSentAck = 0;
+    numRecvd = 0;
+    numRecvdAck = 0;
+    numAckd = 0;
+    numGen = 0;
 }
 
 
 void OpplineApp::initialize() {
     EV << "initialized\n";
+    //flag to indicate if I am waiting for a message to transition to Opportunistic Beacon
     f_wait4msg = false;
+    //My MAC address
     inet::ieee80211::Ieee80211Mac *add;
     //get time for opportunistic beacon and beacon observer states
     interval = par("tob");
     //get time interval for generating new messages
     tmi = par("tmi");
+    //duration of BO and OB states (default is same)
     txbo = par("txbo");
     txob = par("txob");
     //get number of devices (to generate MAC destination addresses)
     numDevices = getParentModule()->getParentModule()->par("hostNum");
+    //start generating new messages
     cMessage *genOpplineMessage = new cMessage("MSG");
     state = "";
     parentHost = getParentModule();
@@ -95,17 +110,16 @@ void OpplineApp::initialize() {
     address =  add->getAddress();
     EV << address << '\t';
     EV << address.getInt() <<  '\n';
-    scheduleAt(tmi, genOpplineMessage);
+    scheduleAt(simTime()+tmi, genOpplineMessage);
     WATCH(state);
     WATCH(curssid);
     WATCH(curdst);
+    //Generate new message at start (for debug purposes)
     initial_msg = par("initial_msg");
     //Begin as AP or STA
     if (par("initial_state")) {
        if (initial_msg > 0) {
-            newMessage(initial_msg); //remove TODO
-        } else {
-            newMessage();
+            newMessage(initial_msg); //debug
         }
         BOtoOB();
     } else {
@@ -114,7 +128,7 @@ void OpplineApp::initialize() {
 }
 
 
-
+//Manage self messages
 void OpplineApp::handleMessage(cMessage *msg) {
     if (msg->isName("STA")) {
         OBtoBO();
@@ -129,10 +143,10 @@ void OpplineApp::handleMessage(cMessage *msg) {
     } else if (msg->isName("BO")) {
         delayOBtoBO();
     }
-
     delete(msg);
 }
 
+//Wait for random interval before transitioning to BO
 void OpplineApp::delayOBtoBO() {
     //intermediate message to wait txbo seconds
     if (messageQ->size() > 0) {
@@ -145,6 +159,7 @@ void OpplineApp::delayOBtoBO() {
     }
 }
 
+//Wait for random interval before transitioning to OB
 void OpplineApp::delayBOtoOB() {
     //intermediate message to wait txob seconds
     if (messageQ->size() > 0) {
@@ -157,6 +172,7 @@ void OpplineApp::delayBOtoOB() {
     }
 }
 
+//Transition to BO
 void OpplineApp::OBtoBO() {
     cMessage *event, *scanEv;
     //In BO state scan the wifi list every tsi seconds (scan interval)
@@ -174,6 +190,7 @@ void OpplineApp::OBtoBO() {
     scheduleAt(simTime() + tsi, scanEv);
 }
 
+//Transition to OB
 void OpplineApp::BOtoOB() {
     cMessage *event;
     //if I have some messages try to switch to Opportunistic Beacon
@@ -199,7 +216,7 @@ void OpplineApp::BOtoOB() {
 
 }
 
-
+//Generate a random MAC address among possible ones
 inet::MACAddress OpplineApp::randomMAC() {
     uint64_t mac = 0;
     int tmp;
@@ -210,17 +227,37 @@ inet::MACAddress OpplineApp::randomMAC() {
     return inet::MACAddress(mac);
 }
 
-
+//Generate new message (random destination)
 void OpplineApp::newMessage() {
-    OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, randomMAC());
+    inet::MACAddress mac = randomMAC();
+    OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, mac);
+    //One more request message is sent
+    numSent++;
+    //One more message is generated
+    numGen++;
     messageQ->enQueue(msg->getSSID());
+    EV << "Sending message from " << address << " to " << mac <<endl;
+    EV << "Message: " << msg->getSSID() << endl;
+    cMessage *genOpplineMessage = new cMessage("MSG");
+    scheduleAt(simTime() + tmi, genOpplineMessage);
+
+    //If I was waiting to have a message in my queue now I can transition to OB state and relay it
+    if (messageQ->size() > 0 && f_wait4msg) {
+        f_wait4msg = false;
+        delayBOtoOB();
+    }
 }
 
+//Generate message with specific destination (for debug purposes)
 void OpplineApp::newMessage(int dst) {
     OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, inet::MACAddress(minMac + dst));
+    numSent++;
+    numGen++;
     messageQ->enQueue(msg->getSSID());
+
 }
 
+//Scan
 void OpplineApp::scan() {
     if (state.compare(BOSTATE) != 0) {
         EV << "tried to scan while not active as BO";
@@ -233,7 +270,9 @@ void OpplineApp::scan() {
                 (inet::ieee80211::Ieee80211MgmtSTA *) wlan->getSubmodule("mgmt");
     inet::ieee80211::Ieee80211MgmtSTA::AccessPointList::const_iterator iterator, end;
     EV << parentHost->getFullName() << " ssids: " << std::to_string(mgmtSTA->apList.size()) << "\n";
+    //Iterate throught the AP list
     for (iterator = mgmtSTA->apList.begin(), end = mgmtSTA->apList.end(); iterator != end; ++iterator) {
+        //continue on invalid address
         if (address.compareTo(iterator->address) == 0 ) {
             continue;
         }
@@ -244,19 +283,43 @@ void OpplineApp::scan() {
             continue;
         }
         m = new OpplineMsg(iterator->ssid);
+        //If it's a request message sent to me receive it and send the ack
         if (!m->isAck() && m->dstAdd.compareTo(address) == 0) {
-            getParentModule()->bubble("received message");
             EV << "Message received\n";
-            messageQ->enQueue(m->response());
-        } else if (m->isAck() && m->srcAdd.compareTo(address) == 0) {
+            //record its latency
+            recordScalar("#latency", m->latency(simTime()));
+            //one more received request message
+            numRecvd++;
+            //one more ack sent
+            numSentAck++;
+            //one more message generated
+            numGen++;
+            messageQ->enQueue(m->response(simTime()));
+
+          //If it's an ack message sent to me receive it
+        } else if (m->isAck() && m->srcAdd.compareTo(address) == 0 && messageQ->isQueued(m->original())) {
             EV << "************* RECEIVED ACK *************\n";
             messageQ->remove(m->original());
+            //record the ack latency
+            recordScalar("#acklatency", m->latency(simTime()));
+            //one more ack received
+            numAckd++;
+            //one more ack received
+            numRecvdAck++;
+
+        //If it's an ack but not directed to me delete the original message (if I have it in my queue) and store it
         } else if (m->isAck() && messageQ->isQueued(m->original())) {
             EV << "PASSING ACK\n";
             messageQ->remove(m->original());
+            //one more generated message
+            numGen++;
             messageQ->enQueue(m->getSSID());
+
+        //If it's none of the above and I don't have it store it in my queue
         } else if (!messageQ->isQueued(m->getSSID())) {
             if (!messageQ->isQueued(m->response())) {
+                //One more generated message
+                numGen++;
                 messageQ->enQueue(m->getSSID());
             }
         }
@@ -303,4 +366,19 @@ void OpplineApp::test() {
     msgQ.debugPrint();
     msgQ.remove(cqueue_arr[2]);
     msgQ.debugPrint();
+}
+
+
+void OpplineApp::finish()
+{
+    // This function is called by OMNeT++ at the end of the simulation.
+    EV << "Sent:     " << numSent << '\t' << "Sent ack:    " << numSentAck <<endl;
+    EV << "Received: " << numRecvd << endl;
+    EV << "Acked:    " << numAckd << endl;
+    recordScalar("#sent", numSent);
+    recordScalar("#acksent", numSentAck);
+    recordScalar("#received", numRecvd);
+    recordScalar("#ackreceived", numRecvdAck);
+    recordScalar("#acked", numAckd);
+    recordScalar("#generated", numGen);
 }
