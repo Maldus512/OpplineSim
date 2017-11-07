@@ -3,3 +3,6 @@ Added public functions getSSID and setSSID
 
 Ieee80211MgmtSTA.h
 Made field (and corresponding data type) apList public
+
+Ieee80211AgentSTA.h e .cc
+added public signal code opplineSignal (sent on scanning complete) and added a method to change probedelay

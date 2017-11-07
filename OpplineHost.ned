@@ -30,7 +30,7 @@ simple OpplineApp {
         double txob = normal(4.302, 0.524); //Time interval between BO to OB 
         bool initial_state = default(intuniform(0,1) > 0? true: false);
         int tmi = default(1);
-        int initial_msg = default(-1);
+        bool initial_msg = default(false);
 }
 
 

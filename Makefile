@@ -15,7 +15,26 @@ USERIF_LIBS = $(ALL_ENV_LIBS) # that is, $(TKENV_LIBS) $(QTENV_LIBS) $(CMDENV_LI
 #USERIF_LIBS = $(QTENV_LIBS)
 
 # C++ include paths (with -I)
-INCLUDE_PATH = -I../inet/src -I. -Iresults
+INCLUDE_PATH = \
+    -I../inet/src \
+    -I. \
+    -Iresults \
+    -Iresults/223mx223m_10_540 \
+    -Iresults/223mx223m_10_60 \
+    -Iresults/223mx223m_10_900 \
+    -Iresults/223mx223m_20_540 \
+    -Iresults/223mx223m_20_60 \
+    -Iresults/223mx223m_20_900 \
+    -Iresults/223mx223m_40_60 \
+    -Iresults/335mx335m_10_540 \
+    -Iresults/335mx335m_10_60 \
+    -Iresults/335mx335m_10_900 \
+    -Iresults/335mx335m_20_540 \
+    -Iresults/335mx335m_20_60 \
+    -Iresults/335mx335m_20_900 \
+    -Iresults/old \
+    -Iresults/old/100tests \
+    -Iresults/old/223mx223m_10_900_old
 
 # Additional object and library files to link with
 EXTRA_OBJS =
@@ -121,17 +140,39 @@ clean:
 	$(Q)-rm -f oppline oppline.exe liboppline.so liboppline.a liboppline.dll liboppline.dylib
 	$(Q)-rm -f ./*_m.cc ./*_m.h ./*_sm.cc ./*_sm.h
 	$(Q)-rm -f results/*_m.cc results/*_m.h results/*_sm.cc results/*_sm.h
+	$(Q)-rm -f results/223mx223m_10_540/*_m.cc results/223mx223m_10_540/*_m.h results/223mx223m_10_540/*_sm.cc results/223mx223m_10_540/*_sm.h
+	$(Q)-rm -f results/223mx223m_10_60/*_m.cc results/223mx223m_10_60/*_m.h results/223mx223m_10_60/*_sm.cc results/223mx223m_10_60/*_sm.h
+	$(Q)-rm -f results/223mx223m_10_900/*_m.cc results/223mx223m_10_900/*_m.h results/223mx223m_10_900/*_sm.cc results/223mx223m_10_900/*_sm.h
+	$(Q)-rm -f results/223mx223m_20_540/*_m.cc results/223mx223m_20_540/*_m.h results/223mx223m_20_540/*_sm.cc results/223mx223m_20_540/*_sm.h
+	$(Q)-rm -f results/223mx223m_20_60/*_m.cc results/223mx223m_20_60/*_m.h results/223mx223m_20_60/*_sm.cc results/223mx223m_20_60/*_sm.h
+	$(Q)-rm -f results/223mx223m_20_900/*_m.cc results/223mx223m_20_900/*_m.h results/223mx223m_20_900/*_sm.cc results/223mx223m_20_900/*_sm.h
+	$(Q)-rm -f results/223mx223m_40_60/*_m.cc results/223mx223m_40_60/*_m.h results/223mx223m_40_60/*_sm.cc results/223mx223m_40_60/*_sm.h
+	$(Q)-rm -f results/335mx335m_10_540/*_m.cc results/335mx335m_10_540/*_m.h results/335mx335m_10_540/*_sm.cc results/335mx335m_10_540/*_sm.h
+	$(Q)-rm -f results/335mx335m_10_60/*_m.cc results/335mx335m_10_60/*_m.h results/335mx335m_10_60/*_sm.cc results/335mx335m_10_60/*_sm.h
+	$(Q)-rm -f results/335mx335m_10_900/*_m.cc results/335mx335m_10_900/*_m.h results/335mx335m_10_900/*_sm.cc results/335mx335m_10_900/*_sm.h
+	$(Q)-rm -f results/335mx335m_20_540/*_m.cc results/335mx335m_20_540/*_m.h results/335mx335m_20_540/*_sm.cc results/335mx335m_20_540/*_sm.h
+	$(Q)-rm -f results/335mx335m_20_60/*_m.cc results/335mx335m_20_60/*_m.h results/335mx335m_20_60/*_sm.cc results/335mx335m_20_60/*_sm.h
+	$(Q)-rm -f results/335mx335m_20_900/*_m.cc results/335mx335m_20_900/*_m.h results/335mx335m_20_900/*_sm.cc results/335mx335m_20_900/*_sm.h
+	$(Q)-rm -f results/old/*_m.cc results/old/*_m.h results/old/*_sm.cc results/old/*_sm.h
+	$(Q)-rm -f results/old/100tests/*_m.cc results/old/100tests/*_m.h results/old/100tests/*_sm.cc results/old/100tests/*_sm.h
+	$(Q)-rm -f results/old/223mx223m_10_900_old/*_m.cc results/old/223mx223m_10_900_old/*_m.h results/old/223mx223m_10_900_old/*_sm.cc results/old/223mx223m_10_900_old/*_sm.h
 
 cleanall: clean
 	$(Q)-rm -rf $(PROJECT_OUTPUT_DIR)
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES) $(SM_CC_FILES)  ./*.cc results/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES) $(SM_CC_FILES)  ./*.cc results/*.cc results/223mx223m_10_540/*.cc results/223mx223m_10_60/*.cc results/223mx223m_10_900/*.cc results/223mx223m_20_540/*.cc results/223mx223m_20_60/*.cc results/223mx223m_20_900/*.cc results/223mx223m_40_60/*.cc results/335mx335m_10_540/*.cc results/335mx335m_10_60/*.cc results/335mx335m_10_900/*.cc results/335mx335m_20_540/*.cc results/335mx335m_20_60/*.cc results/335mx335m_20_900/*.cc results/old/*.cc results/old/100tests/*.cc results/old/223mx223m_10_900_old/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/CircularQueue.o: CircularQueue.cc \
-	CircularQueue.h
+	$(INET_PROJ)/src/inet/common/Compat.h \
+	$(INET_PROJ)/src/inet/common/INETDefs.h \
+	$(INET_PROJ)/src/inet/common/InitStages.h \
+	$(INET_PROJ)/src/inet/features.h \
+	$(INET_PROJ)/src/inet/linklayer/common/MACAddress.h \
+	CircularQueue.h \
+	SSIDMessage.h
 $O/OpplineApp.o: OpplineApp.cc \
 	$(INET_PROJ)/src/inet/common/Compat.h \
 	$(INET_PROJ)/src/inet/common/DelayedInitializer.h \
@@ -157,6 +198,7 @@ $O/OpplineApp.o: OpplineApp.cc \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mac/IMacRadioInterface.h \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mac/Ieee80211Frame_m.h \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mac/Ieee80211Mac.h \
+	$(INET_PROJ)/src/inet/linklayer/ieee80211/mgmt/Ieee80211AgentSTA.h \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mgmt/Ieee80211MgmtAP.h \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mgmt/Ieee80211MgmtAPBase.h \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mgmt/Ieee80211MgmtBase.h \
@@ -165,6 +207,7 @@ $O/OpplineApp.o: OpplineApp.cc \
 	$(INET_PROJ)/src/inet/linklayer/ieee80211/mgmt/Ieee80211Primitives_m.h \
 	$(INET_PROJ)/src/inet/mobility/contract/IMobility.h \
 	$(INET_PROJ)/src/inet/networklayer/common/InterfaceEntry.h \
+	$(INET_PROJ)/src/inet/networklayer/common/InterfaceTable.h \
 	$(INET_PROJ)/src/inet/networklayer/common/InterfaceToken.h \
 	$(INET_PROJ)/src/inet/networklayer/common/L3Address.h \
 	$(INET_PROJ)/src/inet/networklayer/common/ModuleIdAddress.h \

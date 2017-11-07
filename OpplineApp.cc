@@ -10,9 +10,11 @@
 #include <queue>
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211MgmtSTA.h"
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211MgmtAP.h"
+#include "inet/linklayer/ieee80211/mgmt/Ieee80211AgentSTA.h"
 #include "inet/linklayer/ieee80211/mac/Ieee80211Mac.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/linklayer/common/MACAddress.h"
+#include "inet/common/NotifierConsts.h"
 #include "CircularQueue.h"
 #include "SSIDMessage.h"
 using namespace omnetpp;
@@ -26,9 +28,7 @@ using namespace omnetpp;
 const uint64_t minMac = 11725260718081;
 //const uint64_t maxMac = 11725260718081;
 
-
-
-
+class myListener;
 
 
 
@@ -43,6 +43,9 @@ class OpplineApp : public cSimpleModule {
     long numRecvd, numRecvdAck;
     long numAckd;
     long numGen;
+    myListener *listener;
+    virtual void scan();
+
   protected:
     // The following redefined virtual function holds the algorithm.
     virtual void initialize() override;
@@ -59,19 +62,38 @@ class OpplineApp : public cSimpleModule {
     simtime_t interval;
     simtime_t tmi, txbo, txob;
     int numDevices;
-    int initial_msg;
+    bool initial_msg;
     virtual void OBtoBO();
     virtual void BOtoOB();
     virtual void delayOBtoBO();
     virtual void delayBOtoOB();
     virtual void newMessage();
     virtual void newMessage(int dst);
-    virtual void scan();
+
     inet::MACAddress randomMAC();
     virtual void finish() override;
 };
 // The module class needs to be registered with OMNeT++
 Define_Module(OpplineApp);
+
+
+class myListener : public cListener {
+    public:
+        OpplineApp *appReference;
+        myListener(OpplineApp *app);
+        virtual void receiveSignal(cComponent *src, simsignal_t id,
+                                      long value, cObject *details) override;
+};
+
+myListener::myListener(OpplineApp * app) {
+    appReference = app;
+}
+
+void myListener::receiveSignal(cComponent *src, simsignal_t id, long value, cObject *details) {
+
+    EV << " I am " << appReference->getFullPath() << " ; Received scan signal from " << src->getFullPath() << endl;
+    appReference->scan();
+}
 
 OpplineApp::OpplineApp() {
     messageQ = new CircularQueue(10);
@@ -84,8 +106,15 @@ OpplineApp::OpplineApp() {
 }
 
 
+
+
 void OpplineApp::initialize() {
     EV << "initialized\n";
+    listener = new myListener(this);
+    //subscribe(inet::ieee80211::Ieee80211AgentSTA::opplineSignal, this);
+    getParentModule()->subscribe(inet::ieee80211::Ieee80211AgentSTA::opplineSignal, listener);
+    //getParentModule()->getParentModule()->subscribe(inet::ieee80211::Ieee80211AgentSTA::opplineSignal, listener);
+
     //flag to indicate if I am waiting for a message to transition to Opportunistic Beacon
     f_wait4msg = false;
     //My MAC address
@@ -116,11 +145,13 @@ void OpplineApp::initialize() {
     WATCH(curdst);
     //Generate new message at start (for debug purposes)
     initial_msg = par("initial_msg");
+
+    if (initial_msg) {
+        newMessage(initial_msg); //debug
+    }
     //Begin as AP or STA
     if (par("initial_state")) {
-       if (initial_msg > 0) {
-            newMessage(initial_msg); //debug
-        }
+
         BOtoOB();
     } else {
         OBtoBO();
@@ -137,7 +168,7 @@ void OpplineApp::handleMessage(cMessage *msg) {
     } else if (msg->isName("MSG")) {
         newMessage();
     } else if (msg->isName("SCAN")) {
-        scan();
+        //scan();
     } else if (msg->isName("OB")) {
         delayBOtoOB();
     } else if (msg->isName("BO")) {
@@ -153,7 +184,9 @@ void OpplineApp::delayOBtoBO() {
         cMessage *event = new cMessage("STA");
         state = TRANSBO;
         EV << "waiting " << txbo << "to transition to Beacon Observer\n";
+
         scheduleAt(simTime() + txbo, event);
+        txbo = normal(3.407, 0.327);
     } else {
         f_wait4msg = true;
     }
@@ -167,6 +200,7 @@ void OpplineApp::delayBOtoOB() {
         state = TRANSOB;
         EV << "waiting " << txob << "to transition to Opportunistic Beacon\n";
         scheduleAt(simTime() + txob, event);
+        txob = normal(4.302, 0.524);
     } else {
         f_wait4msg = true;
     }
@@ -174,9 +208,7 @@ void OpplineApp::delayBOtoOB() {
 
 //Transition to BO
 void OpplineApp::OBtoBO() {
-    cMessage *event, *scanEv;
-    //In BO state scan the wifi list every tsi seconds (scan interval)
-    simtime_t tsi = normal(3.0, 0.247);
+    cMessage *event;
     state = BOSTATE;
     inet::ieee80211::Ieee80211MgmtAP *mgmtAP =
             (inet::ieee80211::Ieee80211MgmtAP *) ap->getSubmodule("mgmt");
@@ -185,9 +217,9 @@ void OpplineApp::OBtoBO() {
     curssid = "disabled";
     curdst = "";
     event = new cMessage("OB");
-    scanEv = new cMessage("SCAN");
+    //scanEv = new cMessage("SCAN");
     scheduleAt(simTime() + interval, event);
-    scheduleAt(simTime() + tsi, scanEv);
+    //scheduleAt(simTime() + tsi, scanEv);
 }
 
 //Transition to OB
@@ -259,13 +291,17 @@ void OpplineApp::newMessage(int dst) {
 
 //Scan
 void OpplineApp::scan() {
+    Enter_Method_Silent();
     if (state.compare(BOSTATE) != 0) {
-        EV << "tried to scan while not active as BO";
+        EV << "tried to scan while not active as BO"<<endl;
         return;
     }
+
+    inet::ieee80211::Ieee80211AgentSTA *agentSTA =
+                    (inet::ieee80211::Ieee80211AgentSTA *) wlan->getSubmodule("agent");
+    agentSTA->setProbeDelay(normal(3.0, 0.247));
+
     OpplineMsg *m;
-    cMessage *scanEv = new cMessage("SCAN");
-    simtime_t tsi = normal(3.0, 0.247);
     inet::ieee80211::Ieee80211MgmtSTA *mgmtSTA =
                 (inet::ieee80211::Ieee80211MgmtSTA *) wlan->getSubmodule("mgmt");
     inet::ieee80211::Ieee80211MgmtSTA::AccessPointList::const_iterator iterator, end;
@@ -330,41 +366,23 @@ void OpplineApp::scan() {
         f_wait4msg = false;
         delayBOtoOB();
     } else {
-        scheduleAt(simTime() + tsi, scanEv);
+        //scheduleAt(simTime() + tsi, scanEv);
     }
 }
 
 
 void OpplineApp::test() {
-    int size = 6, i;
+    int size = 10, i;
     CircularQueue msgQ(size);
     OpplineMsg *msg;
-    string *cqueue_arr = new std::string[size];
-    for (i = 0; i < size; i++) {
+    string *cqueue_arr = new std::string[size+5];
+    for (i = 0; i < size+5; i++) {
         msg = new OpplineMsg(simTime(), i%2==0?REQ:ACK, address, inet::MACAddress(minMac+i));
         cqueue_arr[i] = std::to_string(i);
+        msgQ.enQueue(cqueue_arr[i]);
     }
 
-    msgQ.enQueue(cqueue_arr[0]);
-    //msgQ.debugPrint();
-    msgQ.enQueue(cqueue_arr[1]);
-    //msgQ.debugPrint();
-    msgQ.enQueue(cqueue_arr[2]);
-    msgQ.remove(cqueue_arr[1]);
-    //msgQ.debugPrint();
-    msgQ.deQueue();
-    //msgQ.debugPrint();
-    msgQ.enQueue(cqueue_arr[1]);
-    msgQ.enQueue(cqueue_arr[2]);
-    msgQ.enQueue(cqueue_arr[3]);
-    msgQ.enQueue(cqueue_arr[4]);
-    msgQ.enQueue(cqueue_arr[5]);
-    msgQ.debugPrint();
-    msgQ.remove(cqueue_arr[5]);
-    msgQ.debugPrint();
-    msgQ.deQueue();
-    msgQ.debugPrint();
-    msgQ.remove(cqueue_arr[2]);
+
     msgQ.debugPrint();
 }
 

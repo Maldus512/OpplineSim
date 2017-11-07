@@ -8,6 +8,7 @@
 #include <iostream>
 #include <omnetpp.h>
 #include "CircularQueue.h"
+#include "SSIDMessage.h"
 
 using namespace omnetpp;
 
@@ -29,6 +30,7 @@ int CircularQueue::enQueue(std::string item) {
     if ((front == 0 && rear == qSize-1) || (front == rear+1)) {
         //Queue overflow --> dequeue to make room
         deQueue();
+        //removeOldest();
     }
 
     if (front == -1) {
@@ -42,6 +44,57 @@ int CircularQueue::enQueue(std::string item) {
     }
     cqueue_arr[rear] = item ;
     return 0;
+}
+
+int CircularQueue::findOldest() {
+    int64_t maxlat, tmp;
+    OpplineMsg *msg;
+    maxlat = 0;
+    int res = -1;
+    int i = front;
+    if (front == -1) {
+        return -1;
+    } else if (front == rear) {
+        return front;
+    }else if (i < rear) {
+        while(i <= rear) {
+            msg = new OpplineMsg(cqueue_arr[i]);
+            tmp = msg->latency(omnetpp::simTime());
+            if (tmp > maxlat) {
+                maxlat = tmp;
+                res = i;
+            }
+            i++;
+        }
+    } else {
+        while (i < qSize) {
+            msg = new OpplineMsg(cqueue_arr[i]);
+            tmp = msg->latency(omnetpp::simTime());
+            if (tmp > maxlat) {
+                maxlat = tmp;
+                res = i;
+            }
+            i++;
+        }
+        i = 0;
+        while (i <= rear) {
+            msg = new OpplineMsg(cqueue_arr[i]);
+            tmp = msg->latency(omnetpp::simTime());
+            if (tmp > maxlat) {
+                maxlat = tmp;
+                res = i;
+            }
+            i++;
+        }
+    }
+    return res;
+}
+
+void CircularQueue::removeOldest() {
+    int i = findOldest();
+    if (i > 0) {
+        remove(cqueue_arr[i]);
+    }
 }
 
 void CircularQueue::remove(std::string s) {

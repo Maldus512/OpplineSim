@@ -3,21 +3,30 @@ import sys
 import json
 from glob import glob
 
+import numpy as np
+import scipy as sp
+import scipy.stats
+
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0*np.array(data)
+    n = len(a)
+    m, se = np.mean(a), sp.stats.sem(a)
+    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+    return h
+
 
 def processStats(filename):
     stats = {}
-    nlat = 0
-    acknlat = 0
     numHost = 0
 
-    stats['latency'] = 0
-    stats['acklatency'] = 0
-    stats['received'] = 0
-    stats['ackreceived'] = 0
-    stats['sent'] = 0
-    stats['acksent'] = 0
-    stats['acked'] = 0
-    stats['generated'] = 0
+    stats['latency'] = []
+    stats['acklatency'] = []
+    stats['received'] = []
+    stats['ackreceived'] = []
+    stats['sent'] = []
+    stats['acksent'] = []
+    stats['acked'] = []
+    stats['generated'] = []
 
     with open(filename, 'r') as f:
         for line in f.readlines():
@@ -26,33 +35,35 @@ def processStats(filename):
                 if int(res.group(1)) > numHost:
                     numHost = int(res.group(1))
 
-                if res.group(2) == 'latency':
-                    nlat += 1
-                elif res.group(2) == 'acklatency':
-                    acknlat += 1
-
-                stats[res.group(2)] += int(res.group(3))
+                stats[res.group(2)].append(int(res.group(3)))
 
     try:
-        prr = (stats['received']+stats['ackreceived'])/float(stats['sent']+stats['acksent'])
-        prrreq = stats['received']/float(stats['sent'])
-        prrack = stats['ackreceived']/float(stats['acksent'])
-        latency = stats['latency']/float(nlat)
-        acklatency = stats['acklatency']/float(acknlat)
-        dissemination = stats['generated']/float((stats['sent'] + stats['acksent']) * numHost)
-    except ZeroDivisionError:
+        prr = (sum(stats['received'])+sum(stats['ackreceived']))/float(sum(stats['sent'])+sum(stats['acksent']))
+        prrreq = sum(stats['received'])/float(sum(stats['sent']))
+        prrack = sum(stats['ackreceived'])/float(sum(stats['acksent']))
+	if not stats['latency']:
+		stats['latency'] = 2880*1000
+		print("set latency to 'very high' due to absence of received messages")
+
+	if not stats['acklatency']:
+		stats['acklatency'] = 2880*1000
+		print("set acklatency to 'very high' due to absence of received messages")
+
+	latency = np.mean(stats['latency'])
+        acklatency = np.mean(stats['acklatency'])
+        dissemination = sum(stats['generated'])/float((sum(stats['sent']) + sum(stats['acksent'])) * numHost)
+    except (ZeroDivisionError) as e:
         print("WARNING: some values are not valid")
+	print(str(e))
         return {}
 
     results = {}
     results['prr'] = prr
     results['prrreq'] = prrreq
     results['prrack'] = prrack
-    results['latency'] = latency
-    results['acklatency'] = acklatency
+    results['latency'] = latency/1000
+    results['acklatency'] = acklatency/1000
     results['dissemination'] = dissemination
-    #print(json.dumps(stats,indent=4))
-    #print(json.dumps(results, indent=4))
     return results
 
 
@@ -65,16 +76,27 @@ if __name__ == '__main__':
     final = {}
     for filen in glob(sys.argv[1]):
         print("processing {} ...".format(filen))
-        num += 1
         res = processStats(filen)
+
+	if not res:
+		print("Error in processing {}".format(filen))
+		continue
+
         for key in res:
             if not key in final:
-                final[key] = 0
+                final[key] = []
                 
-            final[key] += res[key]
+            final[key].append(res[key])
 
+	num += 1
+            
+
+    #print(final["latency"])
     print("Average from {} scalar output files".format(num))
+    result = {}
     for key in final:
-        final[key] = final[key]/num
+	result[key+"_var"] = np.var(final[key])
+        result[key] = np.mean(final[key])
+	result[key+"_conf"] = mean_confidence_interval(final[key])
     
-    print(json.dumps(final, indent=4))
+    print(json.dumps(result, indent=4, sort_keys=True))
