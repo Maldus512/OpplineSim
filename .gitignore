@@ -94,3 +94,8 @@ xxx
 .externalToolBuilders
 .project
 .texlipse
+
+#ignore virtualenv
+*/.env/*
+*.json
+*.pdf
