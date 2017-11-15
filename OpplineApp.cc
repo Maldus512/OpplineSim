@@ -324,6 +324,7 @@ void OpplineApp::scan() {
             EV << "Message received\n";
             //record its latency
             recordScalar("#latency", m->latency(simTime()));
+            recordScalar("#received_request", simTime());
             //one more received request message
             numRecvd++;
             //one more ack sent
@@ -338,6 +339,7 @@ void OpplineApp::scan() {
             messageQ->remove(m->original());
             //record the ack latency
             recordScalar("#acklatency", m->latency(simTime()));
+            recordScalar("#received_ack", simTime());
             //one more ack received
             numAckd++;
             //one more ack received

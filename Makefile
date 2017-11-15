@@ -18,6 +18,7 @@ USERIF_LIBS = $(ALL_ENV_LIBS) # that is, $(TKENV_LIBS) $(QTENV_LIBS) $(CMDENV_LI
 INCLUDE_PATH = \
     -I../inet/src \
     -I. \
+    -Ipython \
     -Iresults \
     -Iresults/223mx223m_10_540 \
     -Iresults/223mx223m_10_60 \
@@ -34,7 +35,12 @@ INCLUDE_PATH = \
     -Iresults/335mx335m_20_900 \
     -Iresults/old \
     -Iresults/old/100tests \
-    -Iresults/old/223mx223m_10_900_old
+    -Iresults/old/223mx223m_10_900_old \
+    -Iresults/transient \
+    -Iresults/transient/223mx223m_10_540 \
+    -Iresults/transient/223mx223m_10_60 \
+    -Iresults/transient/223mx223m_10_900 \
+    -Iresults/transient/335mx335m_10_60
 
 # Additional object and library files to link with
 EXTRA_OBJS =
@@ -139,6 +145,7 @@ clean:
 	$(Q)-rm -rf $O
 	$(Q)-rm -f oppline oppline.exe liboppline.so liboppline.a liboppline.dll liboppline.dylib
 	$(Q)-rm -f ./*_m.cc ./*_m.h ./*_sm.cc ./*_sm.h
+	$(Q)-rm -f python/*_m.cc python/*_m.h python/*_sm.cc python/*_sm.h
 	$(Q)-rm -f results/*_m.cc results/*_m.h results/*_sm.cc results/*_sm.h
 	$(Q)-rm -f results/223mx223m_10_540/*_m.cc results/223mx223m_10_540/*_m.h results/223mx223m_10_540/*_sm.cc results/223mx223m_10_540/*_sm.h
 	$(Q)-rm -f results/223mx223m_10_60/*_m.cc results/223mx223m_10_60/*_m.h results/223mx223m_10_60/*_sm.cc results/223mx223m_10_60/*_sm.h
@@ -156,13 +163,18 @@ clean:
 	$(Q)-rm -f results/old/*_m.cc results/old/*_m.h results/old/*_sm.cc results/old/*_sm.h
 	$(Q)-rm -f results/old/100tests/*_m.cc results/old/100tests/*_m.h results/old/100tests/*_sm.cc results/old/100tests/*_sm.h
 	$(Q)-rm -f results/old/223mx223m_10_900_old/*_m.cc results/old/223mx223m_10_900_old/*_m.h results/old/223mx223m_10_900_old/*_sm.cc results/old/223mx223m_10_900_old/*_sm.h
+	$(Q)-rm -f results/transient/*_m.cc results/transient/*_m.h results/transient/*_sm.cc results/transient/*_sm.h
+	$(Q)-rm -f results/transient/223mx223m_10_540/*_m.cc results/transient/223mx223m_10_540/*_m.h results/transient/223mx223m_10_540/*_sm.cc results/transient/223mx223m_10_540/*_sm.h
+	$(Q)-rm -f results/transient/223mx223m_10_60/*_m.cc results/transient/223mx223m_10_60/*_m.h results/transient/223mx223m_10_60/*_sm.cc results/transient/223mx223m_10_60/*_sm.h
+	$(Q)-rm -f results/transient/223mx223m_10_900/*_m.cc results/transient/223mx223m_10_900/*_m.h results/transient/223mx223m_10_900/*_sm.cc results/transient/223mx223m_10_900/*_sm.h
+	$(Q)-rm -f results/transient/335mx335m_10_60/*_m.cc results/transient/335mx335m_10_60/*_m.h results/transient/335mx335m_10_60/*_sm.cc results/transient/335mx335m_10_60/*_sm.h
 
 cleanall: clean
 	$(Q)-rm -rf $(PROJECT_OUTPUT_DIR)
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES) $(SM_CC_FILES)  ./*.cc results/*.cc results/223mx223m_10_540/*.cc results/223mx223m_10_60/*.cc results/223mx223m_10_900/*.cc results/223mx223m_20_540/*.cc results/223mx223m_20_60/*.cc results/223mx223m_20_900/*.cc results/223mx223m_40_60/*.cc results/335mx335m_10_540/*.cc results/335mx335m_10_60/*.cc results/335mx335m_10_900/*.cc results/335mx335m_20_540/*.cc results/335mx335m_20_60/*.cc results/335mx335m_20_900/*.cc results/old/*.cc results/old/100tests/*.cc results/old/223mx223m_10_900_old/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES) $(SM_CC_FILES)  ./*.cc python/*.cc results/*.cc results/223mx223m_10_540/*.cc results/223mx223m_10_60/*.cc results/223mx223m_10_900/*.cc results/223mx223m_20_540/*.cc results/223mx223m_20_60/*.cc results/223mx223m_20_900/*.cc results/223mx223m_40_60/*.cc results/335mx335m_10_540/*.cc results/335mx335m_10_60/*.cc results/335mx335m_10_900/*.cc results/335mx335m_20_540/*.cc results/335mx335m_20_60/*.cc results/335mx335m_20_900/*.cc results/old/*.cc results/old/100tests/*.cc results/old/223mx223m_10_900_old/*.cc results/transient/*.cc results/transient/223mx223m_10_540/*.cc results/transient/223mx223m_10_60/*.cc results/transient/223mx223m_10_900/*.cc results/transient/335mx335m_10_60/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/CircularQueue.o: CircularQueue.cc \
