@@ -9,16 +9,16 @@ import numpy as np
 import scipy as sp
 import scipy.stats
 
-SIZES = [223, 335]
-DEVICES = [10, 20]
+SIZES = [223]#, 335]
+DEVICES = [10]#, 20]
 TMI = [60, 540, 900]
 
-def getTestNames():
+def getTestNames(name=""):
     res = []
     for s in SIZES:
     	for d in DEVICES:
             for t in TMI:
-                 res.append("{}mx{}m_{}_{}".format(s,s,d,t))
+                 res.append("{}{}mx{}m_{}_{}".format(name,s,s,d,t))
     return res
 
 
@@ -56,16 +56,22 @@ def processStats(filename):
         prr = (sum(stats['received'])+sum(stats['ackreceived']))/float(sum(stats['sent'])+sum(stats['acksent']))
         prrreq = sum(stats['received'])/float(sum(stats['sent']))
         prrack = sum(stats['ackreceived'])/float(sum(stats['acksent']))
-	if not stats['latency']:
-		stats['latency'] = 2880*1000
-		print("set latency to 'very high' due to absence of received messages")
+        
+        if prr == 0 or prrreq == 0 or prrack == 0 or prr > 1 or prrreq > 1 or prrack > 1:
+            print("Ratios should not be zero (the protocol isn't that bad) or over 1; file: {}".format(filename))
+            print(prr, prrreq, prrack)
+            print(stats['received'])
 
-	if not stats['acklatency']:
-		stats['acklatency'] = 2880*1000
-		print("set acklatency to 'very high' due to absence of received messages")
+        if not stats['latency']:
+            stats['latency'] = [2880*1000]
+            print("set latency to 'very high' due to absence of received messages")
 
-	latency = np.mean(stats['latency'])
-        acklatency = np.mean(stats['acklatency'])
+        if not stats['acklatency']:
+            stats['acklatency'] = [2880*1000]
+            print("set acklatency to 'very high' due to absence of received messages")
+
+        latency = stats['latency']
+        acklatency = stats['acklatency']
         dissemination = sum(stats['generated'])/float((sum(stats['sent']) + sum(stats['acksent'])) * numHost)
     except (ZeroDivisionError) as e:
         print("WARNING: some values are not valid")
@@ -76,18 +82,25 @@ def processStats(filename):
     results['prr'] = prr
     results['prrreq'] = prrreq
     results['prrack'] = prrack
-    results['latency'] = latency/1000
-    results['acklatency'] = acklatency/1000
+    results['latency'] = [x/1000 for x in latency]
+    results['acklatency'] = [x/1000 for x in acklatency]
     results['dissemination'] = dissemination
-    return results
+    resume = {'sent':sum(stats['sent']), 'acksent':sum(stats['acksent']), 'received':sum(stats['received']), 'ackreceived':sum(stats['ackreceived']) }
+    return results, resume
 
 
 
 if __name__ == '__main__':
-    test_folders = getTestNames()
     if len(sys.argv) < 2:
         exit(1)
     
+    if len(sys.argv) > 2:
+        name = sys.argv[2]
+        test_folders = getTestNames(name)
+    else:
+        name = ""
+        test_folders = getTestNames()
+
     for f in glob("[0-9]*x[0-9]*-[0-9]*.json"):
         remove(f)
 
@@ -97,11 +110,12 @@ if __name__ == '__main__':
     for test in test_folders:
         num = 0
         final = {}
+        resume_final = {}
         folder = join(sys.argv[1], test)
         print("processing folder {}".format(folder))
         onlyfiles = [f for f in listdir(folder) if isfile(join(folder,f)) and f.endswith(".sca")]
         for f in onlyfiles:
-            res = processStats(join(folder,f))
+            res, resume = processStats(join(folder,f))
             if not res:
                 print("Error in processing {}".format(f))
                 continue
@@ -110,24 +124,35 @@ if __name__ == '__main__':
                 if not key in final:
                     final[key] = []
                     
-                final[key].append(res[key])
+                if key == 'latency' or key == 'acklatency':
+                    final[key].extend(res[key])
+                else:
+                    final[key].append(res[key])
+
+            for key in resume:
+                if not key in resume_final:
+                    resume_final[key] = []
+                    
+                resume_final[key].append(resume[key])
+
             num += 1
 
         folder = basename(normpath(folder))
-        print(folder)
-        m =re.match(r"(\d+)mx(\d+)m_(\d+)_(\d+)", folder)
+        m =re.match(r"{}(\d+)mx(\d+)m_(\d+)_(\d+)".format(name), folder)
         size = m.group(1)
         devices = m.group(3)
         tmi = int(m.group(4))
 
         print("Average from {} scalar output files".format(num))
-        print(final["latency"])
         result = {}
         for key in final:
             result[key+"_var"] = np.var(final[key], ddof=1)
             result[key] = np.mean(final[key])
             result[key+"_conf"] = mean_confidence_interval(final[key])
             result[key+"_format"] = "${0:.3f} \pm {1:.3f}$".format(result[key], result[key+"_conf"])
+
+        for key in resume_final:
+            result[key] = np.mean(resume_final[key])
         
         processed_output = "{}x{}-{}.json".format(size, size, devices)
 

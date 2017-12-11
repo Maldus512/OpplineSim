@@ -8,6 +8,7 @@
 #include <string.h>
 #include <omnetpp.h>
 #include <queue>
+#include <map>
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211MgmtSTA.h"
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211MgmtAP.h"
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211AgentSTA.h"
@@ -17,6 +18,7 @@
 #include "inet/common/NotifierConsts.h"
 #include "CircularQueue.h"
 #include "SSIDMessage.h"
+
 using namespace omnetpp;
 
 #define OBSTATE "Opportunistic Beacon"
@@ -30,6 +32,7 @@ const uint64_t minMac = 11725260718081;
 
 class myListener;
 
+static const char alphaNum[] = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890";
 
 
 class OpplineApp : public cSimpleModule {
@@ -62,6 +65,7 @@ class OpplineApp : public cSimpleModule {
     simtime_t interval;
     simtime_t tmi, txbo, txob;
     int numDevices;
+    map<string, bool> received_messages;
     bool initial_msg;
     virtual void OBtoBO();
     virtual void BOtoOB();
@@ -69,6 +73,8 @@ class OpplineApp : public cSimpleModule {
     virtual void delayBOtoOB();
     virtual void newMessage();
     virtual void newMessage(int dst);
+
+    string randContent();
 
     inet::MACAddress randomMAC();
     virtual void finish() override;
@@ -248,6 +254,17 @@ void OpplineApp::BOtoOB() {
 
 }
 
+
+string OpplineApp::randContent() {
+    string s = "";
+    int i;
+    for (i = 0; i < 8; i++) {
+        s += alphaNum[intuniform(0,sizeof(alphaNum)-1)];
+    }
+
+    return s;
+}
+
 //Generate a random MAC address among possible ones
 inet::MACAddress OpplineApp::randomMAC() {
     uint64_t mac = 0;
@@ -262,7 +279,7 @@ inet::MACAddress OpplineApp::randomMAC() {
 //Generate new message (random destination)
 void OpplineApp::newMessage() {
     inet::MACAddress mac = randomMAC();
-    OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, mac);
+    OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, mac, randContent());
     //One more request message is sent
     numSent++;
     //One more message is generated
@@ -282,7 +299,7 @@ void OpplineApp::newMessage() {
 
 //Generate message with specific destination (for debug purposes)
 void OpplineApp::newMessage(int dst) {
-    OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, inet::MACAddress(minMac + dst));
+    OpplineMsg *msg = new OpplineMsg(simTime(), REQ, address, inet::MACAddress(minMac + dst), randContent());
     numSent++;
     numGen++;
     messageQ->enQueue(msg->getSSID());
@@ -321,29 +338,35 @@ void OpplineApp::scan() {
         m = new OpplineMsg(iterator->ssid);
         //If it's a request message sent to me receive it and send the ack
         if (!m->isAck() && m->dstAdd.compareTo(address) == 0) {
-            EV << "Message received\n";
-            //record its latency
-            recordScalar("#latency", m->latency(simTime()));
-            recordScalar("#received_request", simTime());
-            //one more received request message
-            numRecvd++;
-            //one more ack sent
-            numSentAck++;
-            //one more message generated
-            numGen++;
-            messageQ->enQueue(m->response(simTime()));
+            if (!received_messages[m->getSSID()]) {
+                EV << "Message received\n";
+                //record its latency
+                recordScalar("#latency", m->latency(simTime()));
+                recordScalar("#received_request", simTime());
+                //one more received request message
+                numRecvd++;
+                //one more ack sent
+                numSentAck++;
+                //one more message generated
+                numGen++;
+                messageQ->enQueue(m->response(simTime()));
+                received_messages[m->getSSID()] = true;
+            }
 
           //If it's an ack message sent to me receive it
         } else if (m->isAck() && m->srcAdd.compareTo(address) == 0 && messageQ->isQueued(m->original())) {
-            EV << "************* RECEIVED ACK *************\n";
-            messageQ->remove(m->original());
-            //record the ack latency
-            recordScalar("#acklatency", m->latency(simTime()));
-            recordScalar("#received_ack", simTime());
-            //one more ack received
-            numAckd++;
-            //one more ack received
-            numRecvdAck++;
+            if (!received_messages[m->getSSID()]) {
+                EV << "************* RECEIVED ACK *************\n";
+                messageQ->remove(m->original());
+                //record the ack latency
+                recordScalar("#acklatency", m->latency(simTime()));
+                recordScalar("#received_ack", simTime());
+                //one more ack received
+                numAckd++;
+                //one more ack received
+                numRecvdAck++;
+                received_messages[m->getSSID()] = true;
+            }
 
         //If it's an ack but not directed to me delete the original message (if I have it in my queue) and store it
         } else if (m->isAck() && messageQ->isQueued(m->original())) {
@@ -379,7 +402,7 @@ void OpplineApp::test() {
     OpplineMsg *msg;
     string *cqueue_arr = new std::string[size+5];
     for (i = 0; i < size+5; i++) {
-        msg = new OpplineMsg(simTime(), i%2==0?REQ:ACK, address, inet::MACAddress(minMac+i));
+        msg = new OpplineMsg(simTime(), i%2==0?REQ:ACK, address, inet::MACAddress(minMac+i), randContent());
         cqueue_arr[i] = std::to_string(i);
         msgQ.enQueue(cqueue_arr[i]);
     }

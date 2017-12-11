@@ -12,6 +12,8 @@
 
 using namespace std;
 
+
+
 OpplineMsg::OpplineMsg(string m) {
     char time[5];
     char add[8];
@@ -67,7 +69,7 @@ uint64_t OpplineMsg::base94ToDec(char s[], int len) {
     return res;
 }
 
-OpplineMsg::OpplineMsg(omnetpp::simtime_t t, char type,inet::MACAddress src, inet::MACAddress dst) {
+OpplineMsg::OpplineMsg(omnetpp::simtime_t t, char type,inet::MACAddress src, inet::MACAddress dst, string content) {
     char res[33],mac1[8], mac2[8], timestring[5];
     int i, j;
     uint64_t tmp;
@@ -89,7 +91,13 @@ OpplineMsg::OpplineMsg(omnetpp::simtime_t t, char type,inet::MACAddress src, ine
     res[7] = type;
     msgType = type;
     for (i = 0; i < 8; i++) {
-        res[i+8] = 'x';
+        res[i+8] = 'x';//
+    }
+    for (i = 0; i < 8; i++) {
+        if (content[i] == 0)
+            continue;
+
+        res[i+8] = content[i];
     }
     for (i = 0; i < 8; i++) {
         res[16+i] = mac1[i];

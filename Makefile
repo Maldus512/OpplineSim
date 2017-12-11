@@ -36,9 +36,13 @@ INCLUDE_PATH = \
     -Iresults/old \
     -Iresults/old/100tests \
     -Iresults/old/223mx223m_10_900_old \
+    -Iresults/test_fix_223mx223m_10_540 \
+    -Iresults/test_fix_223mx223m_10_60 \
+    -Iresults/test_fix_223mx223m_10_900 \
     -Iresults/transient \
     -Iresults/transient/223mx223m_10_540 \
     -Iresults/transient/223mx223m_10_60 \
+    -Iresults/transient/223mx223m_10_90 \
     -Iresults/transient/223mx223m_10_900 \
     -Iresults/transient/335mx335m_10_60
 
@@ -163,9 +167,13 @@ clean:
 	$(Q)-rm -f results/old/*_m.cc results/old/*_m.h results/old/*_sm.cc results/old/*_sm.h
 	$(Q)-rm -f results/old/100tests/*_m.cc results/old/100tests/*_m.h results/old/100tests/*_sm.cc results/old/100tests/*_sm.h
 	$(Q)-rm -f results/old/223mx223m_10_900_old/*_m.cc results/old/223mx223m_10_900_old/*_m.h results/old/223mx223m_10_900_old/*_sm.cc results/old/223mx223m_10_900_old/*_sm.h
+	$(Q)-rm -f results/test_fix_223mx223m_10_540/*_m.cc results/test_fix_223mx223m_10_540/*_m.h results/test_fix_223mx223m_10_540/*_sm.cc results/test_fix_223mx223m_10_540/*_sm.h
+	$(Q)-rm -f results/test_fix_223mx223m_10_60/*_m.cc results/test_fix_223mx223m_10_60/*_m.h results/test_fix_223mx223m_10_60/*_sm.cc results/test_fix_223mx223m_10_60/*_sm.h
+	$(Q)-rm -f results/test_fix_223mx223m_10_900/*_m.cc results/test_fix_223mx223m_10_900/*_m.h results/test_fix_223mx223m_10_900/*_sm.cc results/test_fix_223mx223m_10_900/*_sm.h
 	$(Q)-rm -f results/transient/*_m.cc results/transient/*_m.h results/transient/*_sm.cc results/transient/*_sm.h
 	$(Q)-rm -f results/transient/223mx223m_10_540/*_m.cc results/transient/223mx223m_10_540/*_m.h results/transient/223mx223m_10_540/*_sm.cc results/transient/223mx223m_10_540/*_sm.h
 	$(Q)-rm -f results/transient/223mx223m_10_60/*_m.cc results/transient/223mx223m_10_60/*_m.h results/transient/223mx223m_10_60/*_sm.cc results/transient/223mx223m_10_60/*_sm.h
+	$(Q)-rm -f results/transient/223mx223m_10_90/*_m.cc results/transient/223mx223m_10_90/*_m.h results/transient/223mx223m_10_90/*_sm.cc results/transient/223mx223m_10_90/*_sm.h
 	$(Q)-rm -f results/transient/223mx223m_10_900/*_m.cc results/transient/223mx223m_10_900/*_m.h results/transient/223mx223m_10_900/*_sm.cc results/transient/223mx223m_10_900/*_sm.h
 	$(Q)-rm -f results/transient/335mx335m_10_60/*_m.cc results/transient/335mx335m_10_60/*_m.h results/transient/335mx335m_10_60/*_sm.cc results/transient/335mx335m_10_60/*_sm.h
 
@@ -174,7 +182,7 @@ cleanall: clean
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES) $(SM_CC_FILES)  ./*.cc python/*.cc results/*.cc results/223mx223m_10_540/*.cc results/223mx223m_10_60/*.cc results/223mx223m_10_900/*.cc results/223mx223m_20_540/*.cc results/223mx223m_20_60/*.cc results/223mx223m_20_900/*.cc results/223mx223m_40_60/*.cc results/335mx335m_10_540/*.cc results/335mx335m_10_60/*.cc results/335mx335m_10_900/*.cc results/335mx335m_20_540/*.cc results/335mx335m_20_60/*.cc results/335mx335m_20_900/*.cc results/old/*.cc results/old/100tests/*.cc results/old/223mx223m_10_900_old/*.cc results/transient/*.cc results/transient/223mx223m_10_540/*.cc results/transient/223mx223m_10_60/*.cc results/transient/223mx223m_10_900/*.cc results/transient/335mx335m_10_60/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES) $(SM_CC_FILES)  ./*.cc python/*.cc results/*.cc results/223mx223m_10_540/*.cc results/223mx223m_10_60/*.cc results/223mx223m_10_900/*.cc results/223mx223m_20_540/*.cc results/223mx223m_20_60/*.cc results/223mx223m_20_900/*.cc results/223mx223m_40_60/*.cc results/335mx335m_10_540/*.cc results/335mx335m_10_60/*.cc results/335mx335m_10_900/*.cc results/335mx335m_20_540/*.cc results/335mx335m_20_60/*.cc results/335mx335m_20_900/*.cc results/old/*.cc results/old/100tests/*.cc results/old/223mx223m_10_900_old/*.cc results/test_fix_223mx223m_10_540/*.cc results/test_fix_223mx223m_10_60/*.cc results/test_fix_223mx223m_10_900/*.cc results/transient/*.cc results/transient/223mx223m_10_540/*.cc results/transient/223mx223m_10_60/*.cc results/transient/223mx223m_10_90/*.cc results/transient/223mx223m_10_900/*.cc results/transient/335mx335m_10_60/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/CircularQueue.o: CircularQueue.cc \

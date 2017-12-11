@@ -173,8 +173,15 @@ bool CircularQueue::isQueued(std::string s) {
 
 bool CircularQueue::equal(string m1, string m2) {
     int i;
+    string s;
     if (m1.length() != 32 || m2.length() != 32) {
-        throw std::invalid_argument( "message of invalid length in queue" );
+        if (m1.length() != 32) {
+            s = m1;
+        } else {
+            s = m2;
+        }
+        std::cout << s;
+        throw std::invalid_argument( "message of invalid length in queue: <" + s + ">" );
     }
 
     for (i = 0; i < 33; i++) {

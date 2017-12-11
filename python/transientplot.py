@@ -66,7 +66,7 @@ if __name__ == "__main__":
         requests.append([])
         acknowledgements.append([])
 
-    plt.axis([0,14400,0,50])
+    plt.axis([0,14400,0,20])
     plt.xlabel("tempo")
     plt.ylabel("numero di messaggi ricevuti")
     for f in files:
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     plt.figure()
 
-    plt.axis([0,14400,0,50])
+    plt.axis([0,14400,0,20])
     plt.xlabel("tempo")
     plt.ylabel("numero di messaggi ricevuti")
     req_plot = [] 

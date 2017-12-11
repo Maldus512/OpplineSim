@@ -40,11 +40,12 @@ def plotResults(results, name, axis=None):
                 plt.legend()
             
             if axis:
-                plt.xticks(TMI)
                 plt.yticks(np.arange(0,1,.1))
                 plt.axis(axis)
-            plt.xlabel("tmi")
-            plt.ylabel("rate")
+            
+            plt.xticks(TMI)
+            plt.xlabel("$T_{mi}$")
+            plt.ylabel(name)
             plt.title("Field {} with {} devices".format(field, devices))
 
         plt.savefig("{}x{}_{}-{}.pdf".format(field,field, devices, name))

@@ -20,7 +20,7 @@ using namespace std;
 class OpplineMsg {
     public:
         OpplineMsg(string m);
-        OpplineMsg(omnetpp::simtime_t time, char type,inet::MACAddress src, inet::MACAddress dst);
+        OpplineMsg(omnetpp::simtime_t time, char type,inet::MACAddress src, inet::MACAddress dst, string content);
         string getSSID();
         inet::MACAddress srcAdd;
         inet::MACAddress dstAdd;
